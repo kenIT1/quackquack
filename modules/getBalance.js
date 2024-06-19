@@ -1,6 +1,7 @@
 const getAction = require("../actions/get");
 const sleep = require("./sleep");
 const config = require("../config.json");
+const addLog = require("./addLog");
 
 async function getBalance(token, ua) {
   let retry = 0;
@@ -19,57 +20,45 @@ async function getBalance(token, ua) {
 async function getBalanceInternal(token, ua) {
   try {
     const response = await getAction(token, "balance/get", ua);
-    // console.log("getBalance", response);
-    const wallets = extractWalletsInfo(response);
-    return wallets;
+    return response.data.data.data;
   } catch (error) {
-    console.log("getBalance error");
     if (error.response) {
-      // console.log(error.response.data);
-      console.log("status", error.response.status);
-      // console.log("data", error.response.data);
       const status = error.response.status;
-      // console.log(error.response.headers);
-      if (status === 503 || status === 502 || status === 504) {
-        console.log("Mat ket noi, tu dong ket noi sau 30s");
-        await sleep(30);
+
+      if (status >= 500) {
+        console.log("Lost connect, auto connect after 5s, retry to die");
+        addLog(`getBalanceInternal error ${status}`, "error");
+        await sleep(5);
         return null;
       } else if (status === 401) {
         console.log(`\nToken loi hoac het han roi\n`);
+        addLog(`getBalanceInternal error Token loi hoac het han roi`, "error");
         process.exit(1);
       } else if (status === 400) {
-        console.log("data", error.response.data);
-        await sleep(10);
-        return null;
+        addLog(
+          `getBalanceInternal error ${error.response.data.error_code}`,
+          "error"
+        );
+        return error.response.data;
       } else {
+        addLog(`getBalanceInternal error ${status} undefined`, "error");
         await sleep(5);
         return null;
       }
     } else if (error.request) {
       console.log("request", error.request);
+      console.log("Lost connect, auto connect after 3s, retry to die");
+      addLog(`getBalanceInternal error request ${error.request}`, "error");
+      await sleep(3);
+      return null;
     } else {
       console.log("error", error.message);
+      console.log("Lost connect, auto connect after 3s, retry to die");
+      addLog(`getBalanceInternal ${error.message}`, "error");
+      await sleep(3);
+      return null;
     }
   }
-}
-
-async function extractWalletsInfo(response) {
-  let wallets = [];
-  response.data.data.data.forEach((bl) => {
-    if (bl.symbol === "PET") {
-      wallets.push({
-        symbol: "PET 🐸",
-        balance: bl.balance,
-      });
-    } else if (bl.symbol === "EGG") {
-      wallets.push({
-        symbol: "EGG 🥚",
-        balance: bl.balance,
-      });
-    }
-  });
-
-  return wallets;
 }
 
 module.exports = getBalance;
