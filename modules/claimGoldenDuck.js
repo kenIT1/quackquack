@@ -1,75 +1,68 @@
 const postAction = require("../actions/post");
-const addLog = require("./addLog");
 const sleep = require("./sleep");
 const config = require("../config.json");
+const addLog = require("./addLog");
 
-function getRewardInfo(data) {
-  if (data.type === 1) return `${data.amount} [ TON ]`;
-  if (data.type === 2) return `${data.amount} [ PEPET 🐸 ]`;
-  if (data.type === 3) return `${data.amount} [ EGG 🥚 ]`;
-  if (data.type === 4) return `${data.amount} [ TRU ]`;
-}
-
-async function claimGoldenDuck(token, ua, reward) {
+async function claimGoldenDuck(token, ua) {
   let retry = 0;
   let data = null;
   while (retry < config.retryCount) {
     if (!!data) {
       break;
     }
-    data = await claimGoldenDuckInternal(token, ua, reward);
+    data = await claimGoldenDuckInternal(token, ua);
     retry++;
   }
 
   return data;
 }
 
-async function claimGoldenDuckInternal(token, ua, reward) {
+async function claimGoldenDuckInternal(token, ua) {
   try {
     const response = await postAction(token, "golden-duck/claim", "type=1", ua);
-    // console.log("goldenDuckClaim", data);
-    if (response.data.data) {
-      const rewardInfo = getRewardInfo(reward);
-      console.log(`[ GOLDEN DUCK 🐥 ] : ${rewardInfo}`);
-      addLog(`[ GOLDEN DUCK 🐥 ] : ${rewardInfo}\n`);
-      await sleep(config.sleepTime);
-      return data.data;
-    } else {
-      console.log("Claim zịt zàng thất bại");
-      addLog("Claim zịt zàng thất bại\n");
-      return null;
-    }
+    return response.data;
   } catch (error) {
-    console.log("claimGoldenDuck error");
     if (error.response) {
-      // console.log(error.response.data);
-      console.log("status", error.response.status);
-      // console.log("data", error.response.data);
       const status = error.response.status;
-      // console.log(error.response.headers);
-      if (status === 503 || status === 502 || status === 504) {
-        console.log("Mat ket noi, tu dong ket noi sau 30s");
-        await sleep(30);
+
+      if (status >= 500) {
+        console.log("Lost connect, auto connect after 5s, retry to die");
+        addLog(`claimGoldenDuckInternal error ${status}`, "error");
+        await sleep(5);
         return null;
       } else if (status === 401) {
-        console.log(`\nToken loi hoac het han roi\n`);
+        console.log(`\nToken loi hoac het han\n`);
+        addLog(
+          `claimGoldenDuckInternal error Token loi hoac het han roi`,
+          "error"
+        );
         process.exit(1);
       } else if (status === 400) {
-        console.log("data", error.response.data);
-        await sleep(10);
-        return null;
+        addLog(
+          `claimGoldenDuckInternal error ${error.response.data.error_code}`,
+          "error"
+        );
+        return error.response.data;
       } else {
-        await sleep(5);
+        console.log("Lost connect, auto connect after 3s, retry to die");
+        addLog(`claimGoldenDuckInternal error ${status} undefined`, "error");
+        await sleep(3);
         return null;
       }
     } else if (error.request) {
       console.log("request", error.request);
+      console.log("Lost connect, auto connect after 3s, retry to die");
+      addLog(`claimGoldenDuckInternal error request ${error.request}`, "error");
+      await sleep(3);
+      return null;
     } else {
       console.log("error", error.message);
+      console.log("Lost connect, auto connect after 3s, retry to die");
+      addLog(`claimGoldenDuckInternal error ${error.message}`, "error");
+      await sleep(3);
+      return null;
     }
   }
-
-  return null;
 }
 
 module.exports = claimGoldenDuck;
