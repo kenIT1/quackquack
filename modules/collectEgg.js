@@ -3,25 +3,25 @@ const sleep = require("./sleep");
 const config = require("../config.json");
 const addLog = require("./addLog");
 
-async function collectDuck(token, ua, nest_id) {
+async function collectEgg(token, ua, nest_id) {
   let retry = 0;
   let data = null;
   while (retry < config.retryCount) {
     if (!!data) {
       break;
     }
-    data = await collectDuckInternal(token, ua, nest_id);
+    data = await collectEggInternal(token, ua, nest_id);
     retry++;
   }
 
   return data;
 }
 
-async function collectDuckInternal(token, ua, nest_id) {
+async function collectEggInternal(token, ua, nest_id) {
   try {
     const response = await postAction(
       token,
-      "nest/collect-duck",
+      "nest/collect",
       "nest_id=" + nest_id,
       ua
     );
@@ -32,35 +32,36 @@ async function collectDuckInternal(token, ua, nest_id) {
 
       if (status >= 500) {
         console.log("Lost connect, auto connect after 5s, retry to die");
-        addLog(`collectDuck error ${status}`, "error");
+        addLog(`collectEgg error ${status}`, "error");
         await sleep(5);
         return null;
       } else if (status === 401) {
         console.log(`\nToken loi hoac het han roi\n`);
-        addLog(`collectDuck error Token loi hoac het han roi`, "error");
+        addLog(`collectEgg error Token loi hoac het han roi`, "error");
         process.exit(1);
       } else if (status === 400) {
-        addLog(`collectDuck error ${error.response.data.error_code}`, "error");
+        addLog(`collectEgg error ${error.response.data.error_code}`, "error");
         return error.response.data;
       } else {
-        addLog(`collectDuck error ${status} undefined`, "error");
+        console.log("Lost connect, auto connect after 3s, retry to die");
+        addLog(`collectEgg error ${status} undefined`, "error");
         await sleep(3);
         return null;
       }
     } else if (error.request) {
       console.log("request", error.request);
       console.log("Lost connect, auto connect after 3s, retry to die");
-      addLog(`collectDuck error request ${error.request}`, "error");
+      addLog(`collectEgg error request ${error.request}`, "error");
       await sleep(3);
       return null;
     } else {
       console.log("error", error.message);
-      console.log("Lost connect, auto connect after 5s, retry to die");
-      addLog(`collectDuck error ${error.message}`, "error");
+      console.log("Lost connect, auto connect after 3s, retry to die");
+      addLog(`collectEgg error ${error.message}`, "error");
       await sleep(3);
       return null;
     }
   }
 }
 
-module.exports = collectDuck;
+module.exports = collectEgg;
