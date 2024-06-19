@@ -1,8 +1,7 @@
 const TOKEN_FILE_PATH = "./token.json";
 const fs = require("fs");
 
-const ERROR_MESSAGE =
-  "\nLoi dinh dang Token, vui long paste Token vao file token.json\nXem cach lay Token o phan README cua j2c.cc/quack\n";
+const ERROR_MESSAGE = "\nToken error, see how to get Token at j2c.cc/quack\n";
 
 function loadUserLoginInfo() {
   let content = "";
